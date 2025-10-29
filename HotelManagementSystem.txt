@@ -1,0 +1,236 @@
+import javax.swing.*;
+import java.awt.*;
+import java.util.ArrayList;
+import java.util.List;
+
+public class HotelManagementSystem extends JFrame {
+
+    private List<Room> rooms;
+    private List<Booking> bookings;
+
+    private JTextArea displayArea;
+    private JTextField roomField, nameField, phoneField;
+
+    public HotelManagementSystem() {
+        setTitle("Hotel Management System");
+        setSize(600, 520);
+        setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+        setLayout(new BorderLayout());
+
+        rooms = new ArrayList<>();
+        bookings = new ArrayList<>();
+
+        // Predefined Rooms
+        rooms.add(new Room(101, "Single", 1500));
+        rooms.add(new Room(102, "Double", 2500));
+        rooms.add(new Room(103, "Suite", 4000));
+
+        // Header
+        JLabel header = new JLabel("Hotel Management System", JLabel.CENTER);
+        header.setFont(new Font("Arial", Font.BOLD, 22));
+        header.setBorder(BorderFactory.createEmptyBorder(10, 0, 10, 0));
+        add(header, BorderLayout.NORTH);
+
+        // Display Area
+        displayArea = new JTextArea();
+        displayArea.setEditable(false);
+        displayArea.setFont(new Font("Monospaced", Font.PLAIN, 14));
+        add(new JScrollPane(displayArea), BorderLayout.CENTER);
+
+        // Control Panel
+        JPanel controlPanel = new JPanel();
+        controlPanel.setLayout(new GridLayout(6, 2, 5, 5));
+        controlPanel.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
+
+        controlPanel.add(new JLabel("Room Number:"));
+        roomField = new JTextField();
+        controlPanel.add(roomField);
+
+        controlPanel.add(new JLabel("Customer Name:"));
+        nameField = new JTextField();
+        controlPanel.add(nameField);
+
+        controlPanel.add(new JLabel("Phone Number:"));
+        phoneField = new JTextField();
+        controlPanel.add(phoneField);
+
+        JButton showRoomsBtn = new JButton("Show Rooms");
+        JButton bookBtn = new JButton("Book Room");
+        JButton showBookingsBtn = new JButton("Show Bookings");
+        JButton cancelBookingBtn = new JButton("Cancel Booking");
+
+        controlPanel.add(showRoomsBtn);
+        controlPanel.add(bookBtn);
+        controlPanel.add(showBookingsBtn);
+        controlPanel.add(cancelBookingBtn);
+
+        add(controlPanel, BorderLayout.SOUTH);
+
+        // Button Actions
+        showRoomsBtn.addActionListener(e -> showRooms());
+        bookBtn.addActionListener(e -> bookRoom());
+        showBookingsBtn.addActionListener(e -> showBookings());
+        cancelBookingBtn.addActionListener(e -> cancelBooking());
+
+        setVisible(true);
+    }
+
+    private void showRooms() {
+        displayArea.setText("Available Rooms:\n");
+        for (Room r : rooms) {
+            displayArea.append(r + "\n");
+        }
+    }
+
+    private void showBookings() {
+        displayArea.setText("Current Bookings:\n");
+        if (bookings.isEmpty()) {
+            displayArea.append("No bookings yet.\n");
+            return;
+        }
+        for (Booking b : bookings) {
+            displayArea.append(b + "\n");
+        }
+    }
+
+    private void bookRoom() {
+        String roomNumStr = roomField.getText().trim();
+        String name = nameField.getText().trim();
+        String phone = phoneField.getText().trim();
+
+        // Validate fields
+        if (roomNumStr.isEmpty() || name.isEmpty() || phone.isEmpty() || phone.length() != 10 || !phone.matches("\\d+")) {
+            showErrorPopup("Please fill in all fields with valid data before booking!");
+            return;
+        }
+
+        try {
+            int roomNum = Integer.parseInt(roomNumStr);
+
+            for (Room r : rooms) {
+                if (r.roomNumber == roomNum && !r.isBooked) {
+                    Customer c = new Customer(name, phone);
+                    Booking b = new Booking(r, c);
+                    bookings.add(b);
+                    JOptionPane.showMessageDialog(this, "Room booked successfully!");
+                    showRooms();
+                    clearFields();
+                    return;
+                }
+            }
+
+            showErrorPopup("Room not available or already booked.");
+        } catch (NumberFormatException e) {
+            showErrorPopup("Room number must be a valid number!");
+        }
+    }
+
+    private void cancelBooking() {
+        String roomNumStr = roomField.getText().trim();
+        String name = nameField.getText().trim();
+        String phone = phoneField.getText().trim();
+
+        if (roomNumStr.isEmpty() || name.isEmpty() || phone.isEmpty()) {
+            showErrorPopup("Please fill in all fields before canceling!");
+            return;
+        }
+
+        try {
+            int roomNum = Integer.parseInt(roomNumStr);
+
+            for (Booking b : bookings) {
+                if (b.room.roomNumber == roomNum &&
+                    b.customer.name.equalsIgnoreCase(name) &&
+                    b.customer.phone.equals(phone)) {
+
+                    b.room.isBooked = false;
+                    bookings.remove(b);
+                    JOptionPane.showMessageDialog(this, "Booking canceled successfully!");
+                    showRooms();
+                    clearFields();
+                    return;
+                }
+            }
+
+            showErrorPopup("No matching booking found. Please check your details.");
+        } catch (NumberFormatException e) {
+            showErrorPopup("Room number must be a valid number!");
+        }
+    }
+
+    // Modal popup (main window is blocked)
+    private void showErrorPopup(String message) {
+        JDialog dialog = new JDialog(this, "Invalid Input", true);
+        dialog.setSize(350, 150);
+        dialog.setLayout(new BorderLayout());
+        dialog.setLocationRelativeTo(this);
+
+        JLabel msgLabel = new JLabel(message, JLabel.CENTER);
+        msgLabel.setFont(new Font("Arial", Font.PLAIN, 14));
+        msgLabel.setBorder(BorderFactory.createEmptyBorder(20, 10, 10, 10));
+        dialog.add(msgLabel, BorderLayout.CENTER);
+
+        JButton okBtn = new JButton("OK");
+        okBtn.addActionListener(e -> dialog.dispose());
+        JPanel btnPanel = new JPanel();
+        btnPanel.add(okBtn);
+        dialog.add(btnPanel, BorderLayout.SOUTH);
+
+        dialog.setResizable(false);
+        dialog.setVisible(true);
+    }
+
+    private void clearFields() {
+        roomField.setText("");
+        nameField.setText("");
+        phoneField.setText("");
+    }
+
+    public static void main(String[] args) {
+        SwingUtilities.invokeLater(() -> new HotelManagementSystem());
+    }
+}
+
+// --- Supporting Classes ---
+class Room {
+    int roomNumber;
+    String type;
+    int price;
+    boolean isBooked;
+
+    Room(int roomNumber, String type, int price) {
+        this.roomNumber = roomNumber;
+        this.type = type;
+        this.price = price;
+        this.isBooked = false;
+    }
+
+    public String toString() {
+        return "Room " + roomNumber + " (" + type + ") - Rs." + price + (isBooked ? " [BOOKED]" : " [AVAILABLE]");
+    }
+}
+
+class Customer {
+    String name;
+    String phone;
+
+    Customer(String name, String phone) {
+        this.name = name;
+        this.phone = phone;
+    }
+}
+
+class Booking {
+    Room room;
+    Customer customer;
+
+    Booking(Room room, Customer customer) {
+        this.room = room;
+        this.customer = customer;
+        this.room.isBooked = true;
+    }
+
+    public String toString() {
+        return "Room " + room.roomNumber + " -> " + customer.name + " (" + customer.phone + ")";
+    }
+}
